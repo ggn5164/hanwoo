@@ -120,7 +120,12 @@ let curTable = null;
 let curCat = null;
 
 function fmt(n) { return n.toLocaleString() + '원'; }
-function getToday() { return new Date().toISOString().split('T')[0]; }
+function getToday() {
+    // 한국 시간(KST)은 UTC+9이므로 이를 계산해서 날짜를 가져옵니다.
+    const now = new Date();
+    const krDate = new Date(now.getTime() + (9 * 60 * 60 * 1000));
+    return krDate.toISOString().split('T')[0];
+}
 
 function saveAll() {
     localStorage.setItem('pos_table_orders', JSON.stringify(tableOrders));
