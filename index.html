@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>한우 포스기</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#f0e8e0;font-size:16px;height:100vh;overflow:hidden}
+:root{
+  --primary:#8B1A1A;
+  --primary-light:#B22222;
+  --bg:#fff;
+  --bg2:#f8f4f0;
+  --bg3:#f0e8e0;
+  --text:#1a1a1a;
+  --text2:#555;
+  --border:#ddd;
+  --green:#1a6b2e;
+}
+
+/* 테이블 선택 화면 */
+#tableScreen{
+  position:fixed;inset:0;background:#f0e8e0;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:24px;z-index:50;
+}
+#tableScreen h1{font-size:26px;font-weight:700;color:var(--primary);}
+#tableScreen .table-grid{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:12px;width:min(96vw,540px);
+}
+.table-btn{
+  padding:20px 10px;border-radius:12px;border:2.5px solid var(--border);
+  background:var(--bg);font-size:18px;font-weight:700;cursor:pointer;
+  color:var(--text);text-align:center;transition:all .15s;
+}
+.table-btn:hover,.table-btn:active{background:var(--primary);color:#fff;border-color:var(--primary);}
+.table-btn.occupied{background:#fff3cd;border-color:#e0a800;color:#7a5c00;}
+
+/* 메인 POS 화면 */
+#posScreen{display:none;height:100vh;flex-direction:column}
+#posScreen.show{display:flex}
+
+.top-bar{
+  background:var(--primary);color:#fff;
+  display:flex;align-items:center;padding:10px 14px;gap:10px;flex-shrink:0;
+}
+.top-bar .table-info{font-size:20px;font-weight:700;flex:1}
+.top-bar button{
+  padding:8px 14px;border-radius:8px;border:1.5px solid rgba(255,255,255,.5);
+  background:rgba(255,255,255,.15);color:#fff;font-size:14px;cursor:pointer;
+}
+.top-bar button:hover{background:rgba(255,255,255,.3)}
+
+.main-area{display:flex;flex:1;overflow:hidden}
+
+.left{width:62%;display:flex;flex-direction:column;padding:10px;gap:8px;overflow:hidden}
+.right{width:38%;background:var(--bg);border-left:2px solid var(--border);display:flex;flex-direction:column;padding:12px;gap:8px;overflow:hidden}
+
+.cat-tabs{display:flex;gap:6px;flex-wrap:wrap;flex-shrink:0}
+.tab{
+  padding:10px 16px;border-radius:8px;border:2px solid var(--border);
+  background:var(--bg);font-size:15px;font-weight:500;cursor:pointer;color:var(--text2);
+}
+.tab.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+
+.menu-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:8px;
+  overflow-y:auto;flex:1;
+}
+.menu-btn{
+  background:var(--bg);border:2px solid var(--border);border-radius:10px;
+  padding:12px 8px;cursor:pointer;text-align:center;
+  display:flex;flex-direction:column;gap:4px;align-items:center;
+}
+.menu-btn:hover{border-color:var(--primary);background:#fff5f5}
+.menu-btn:active{transform:scale(0.96)}
+.menu-btn .name{font-size:15px;font-weight:500;color:var(--text);line-height:1.3}
+.menu-btn .sub{font-size:12px;color:var(--text2)}
+.menu-btn .price{font-size:16px;font-weight:700;color:var(--primary)}
+.menu-btn.beef{border-color:#c0392b;background:#fff8f8}
+
+.order-title{font-size:17px;font-weight:700;color:var(--primary);padding-bottom:8px;border-bottom:2px solid var(--primary);flex-shrink:0}
+.order-list{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:6px}
+.order-item{display:flex;align-items:center;gap:5px;padding:7px 8px;background:var(--bg2);border-radius:8px}
+.order-item .iname{flex:1;font-size:14px;font-weight:500}
+.order-item .iqty{display:flex;align-items:center;gap:3px}
+.order-item .iqty button{
+  width:26px;height:26px;border-radius:6px;border:1.5px solid var(--border);
+  background:var(--bg);font-size:15px;cursor:pointer;font-weight:700;color:var(--text);line-height:1;
+}
+.order-item .iqty button:hover{background:var(--primary);color:#fff;border-color:var(--primary)}
+.order-item .iqty .qty{font-size:15px;font-weight:700;min-width:20px;text-align:center}
+.order-item .iprice{font-size:14px;font-weight:700;color:var(--primary);min-width:58px;text-align:right}
+.order-item .idel{background:none;border:none;color:#aaa;cursor:pointer;font-size:17px;padding:1px 3px}
+.order-item .idel:hover{color:#c0392b}
+
+.total-box{background:var(--bg2);border-radius:10px;padding:10px 12px;border:2px solid var(--primary);flex-shrink:0}
+.total-row{display:flex;justify-content:space-between;font-size:15px;margin-bottom:3px;color:var(--text2)}
+.total-row.main{font-size:21px;font-weight:700;color:var(--primary);margin-top:5px;padding-top:7px;border-top:1.5px solid var(--border)}
+
+.btn-row{display:flex;gap:7px;flex-shrink:0}
+.btn-pay{flex:1;padding:13px;border-radius:10px;font-size:17px;font-weight:700;cursor:pointer;border:none}
+.btn-pay:active{transform:scale(0.97)}
+.btn-cash{background:var(--green);color:#fff}
+.btn-card{background:var(--primary);color:#fff}
+.btn-clear{background:var(--bg3);color:var(--text2);border:2px solid var(--border);flex:.6;font-size:15px;font-weight:500;padding:13px;border-radius:10px;cursor:pointer}
+
+.empty{text-align:center;color:var(--text2);font-size:14px;padding:20px 0}
+
+/* 관리 오버레이 */
+.admin-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.55);
+  display:none;align-items:center;justify-content:center;z-index:100;
+}
+.admin-overlay.show{display:flex}
+.admin-box{
+  background:var(--bg);border-radius:14px;padding:22px;
+  width:min(96vw,480px);max-height:88vh;overflow-y:auto;
+  display:flex;flex-direction:column;gap:12px;
+}
+.admin-box h2{font-size:19px;font-weight:700;color:var(--primary)}
+.admin-box input,.admin-box select{
+  width:100%;padding:10px 12px;border:1.5px solid var(--border);
+  border-radius:8px;font-size:15px;color:var(--text);
+}
+.admin-box label{font-size:13px;color:var(--text2);margin-bottom:3px;display:block}
+.admin-row{display:flex;gap:8px}
+.admin-row>div{flex:1;display:flex;flex-direction:column}
+.menu-edit-list{display:flex;flex-direction:column;gap:5px;max-height:200px;overflow-y:auto}
+.edit-item{display:flex;align-items:center;gap:6px;padding:7px;background:var(--bg2);border-radius:8px;font-size:14px}
+.edit-item .ename{flex:1}
+.edit-item input{width:88px;padding:5px 7px;border:1.5px solid var(--border);border-radius:6px;font-size:14px}
+.edit-item .del-btn{background:none;border:none;color:#c0392b;cursor:pointer;font-size:17px;padding:0 3px}
+.btn-save{background:var(--primary);color:#fff;border:none;padding:11px 0;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;width:100%}
+.btn-close{background:var(--bg3);color:var(--text2);border:2px solid var(--border);padding:10px 0;border-radius:8px;font-size:14px;cursor:pointer;width:100%}
+
+/* 테이블 수 변경 오버레이 */
+.tbl-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:100}
+.tbl-overlay.show{display:flex}
+.tbl-box{background:var(--bg);border-radius:14px;padding:24px;width:min(96vw,320px);display:flex;flex-direction:column;gap:14px}
+.tbl-box h2{font-size:18px;font-weight:700;color:var(--primary)}
+.tbl-box input{width:100%;padding:12px;border:1.5px solid var(--border);border-radius:8px;font-size:17px;text-align:center}
+
+.alert{
+  position:fixed;top:18px;left:50%;transform:translateX(-50%);
+  background:var(--green);color:#fff;padding:11px 22px;
+  border-radius:10px;font-size:15px;font-weight:500;display:none;z-index:200;
+}
+</style>
+</head>
+<body>
+
+<!-- 테이블 선택 화면 -->
+<div id="tableScreen">
+  <h1>🍖 테이블 선택</h1>
+  <div class="table-grid" id="tableGrid"></div>
+  <button onclick="openTblSettings()" style="margin-top:8px;padding:10px 20px;border-radius:8px;border:1.5px solid #ccc;background:#fff;font-size:14px;color:#666;cursor:pointer">⚙ 테이블 수 변경</button>
+</div>
+
+<!-- 메인 POS 화면 -->
+<div id="posScreen">
+  <div class="top-bar">
+    <span class="table-info" id="tableLabel">테이블 1</span>
+    <button onclick="openAdmin()">⚙ 메뉴 관리</button>
+    <button onclick="goTableSelect()">테이블 변경</button>
+  </div>
+  <div class="main-area">
+    <div class="left">
+      <div class="cat-tabs" id="catTabs"></div>
+      <div class="menu-grid" id="menuGrid"></div>
+    </div>
+    <div class="right">
+      <div class="order-title" id="orderTitle">주문 내역</div>
+      <div class="order-list" id="orderList"></div>
+      <div class="total-box">
+        <div class="total-row"><span>품목</span><span id="itemCount">0가지</span></div>
+        <div class="total-row"><span>수량</span><span id="qtySum">0개</span></div>
+        <div class="total-row main"><span>합계</span><span id="totalPrice">0원</span></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn-clear" onclick="clearOrder()">취소</button>
+        <button class="btn-pay btn-cash" onclick="pay('현금')">현금</button>
+        <button class="btn-pay btn-card" onclick="pay('카드')">카드</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 메뉴 관리 오버레이 -->
+<div class="admin-overlay" id="adminOverlay">
+<div class="admin-box">
+  <h2>메뉴 관리</h2>
+  <div><label>카테고리</label><select id="adminCat" onchange="renderAdminEdit()"></select></div>
+  <div class="menu-edit-list" id="adminEditList"></div>
+  <hr style="border:none;border-top:1.5px solid var(--border)">
+  <div style="font-size:14px;font-weight:700;color:var(--text)">새 메뉴 추가</div>
+  <div class="admin-row">
+    <div><label>이름</label><input id="newName" placeholder="메뉴명"></div>
+    <div><label>부가정보</label><input id="newSub" placeholder="예: 150g / 1인분"></div>
+  </div>
+  <div class="admin-row">
+    <div><label>가격 (원)</label><input id="newPrice" type="number" placeholder="15000"></div>
+    <div><label>새 카테고리</label><input id="newCatInput" placeholder="카테고리명 (선택)"></div>
+  </div>
+  <button class="btn-save" onclick="addMenu()">+ 메뉴 추가</button>
+  <button class="btn-close" onclick="closeAdmin()">닫기</button>
+</div>
+</div>
+
+<!-- 테이블 수 설정 오버레이 -->
+<div class="tbl-overlay" id="tblOverlay">
+<div class="tbl-box">
+  <h2>테이블 수 변경</h2>
+  <label style="font-size:14px;color:#555">테이블 수 입력</label>
+  <input type="number" id="tblCountInput" min="1" max="30" value="12">
+  <button class="btn-save" onclick="saveTblCount()">저장</button>
+  <button class="btn-close" onclick="closeTblSettings()">취소</button>
+</div>
+</div>
+
+<div class="alert" id="alertBox"></div>
+
+<script>
+// ========== 데이터 ==========
+var defaultMenus = {
+  '한우': [
+    {name:'등심',sub:'150g/1인분',price:39000,beef:true},
+    {name:'안심',sub:'150g/1인분',price:45000,beef:true},
+    {name:'갈비',sub:'150g/1인분',price:42000,beef:true},
+    {name:'살치살',sub:'150g/1인분',price:48000,beef:true},
+    {name:'꽃등심',sub:'150g/1인분',price:52000,beef:true},
+    {name:'채끝',sub:'150g/1인분',price:44000,beef:true},
+    {name:'토시살',sub:'150g/1인분',price:38000,beef:true},
+    {name:'업진살',sub:'150g/1인분',price:36000,beef:true},
+    {name:'부채살',sub:'150g/1인분',price:40000,beef:true}
+  ],
+  '식사': [
+    {name:'된장찌개',sub:'1인분',price:9000},
+    {name:'김치찌개',sub:'1인분',price:9000},
+    {name:'냉면',sub:'물/비빔',price:12000},
+    {name:'육개장',sub:'1인분',price:11000},
+    {name:'갈비탕',sub:'1인분',price:15000},
+    {name:'공기밥',sub:'',price:1500}
+  ],
+  '주류': [
+    {name:'소주',sub:'1병',price:5000},
+    {name:'맥주',sub:'1병',price:6000},
+    {name:'막걸리',sub:'1병',price:6000},
+    {name:'양주(잔)',sub:'1잔',price:8000},
+    {name:'와인(잔)',sub:'1잔',price:9000}
+  ],
+  '음료': [
+    {name:'콜라',sub:'캔',price:2000},
+    {name:'사이다',sub:'캔',price:2000},
+    {name:'물',sub:'500ml',price:1000},
+    {name:'식혜',sub:'1컵',price:3000},
+    {name:'수정과',sub:'1컵',price:3000}
+  ],
+  '후식': [
+    {name:'아이스크림',sub:'1개',price:3000},
+    {name:'식혜',sub:'후식용',price:2000},
+    {name:'한과',sub:'1접시',price:4000},
+    {name:'과일',sub:'계절 과일',price:8000}
+  ]
+};
+
+// localStorage에서 불러오기 (없으면 기본값)
+function loadMenus() {
+  var saved = localStorage.getItem('pos_menus');
+  return saved ? JSON.parse(saved) : JSON.parse(JSON.stringify(defaultMenus));
+}
+function saveMenus() {
+  localStorage.setItem('pos_menus', JSON.stringify(menus));
+}
+function loadTableCount() {
+  return parseInt(localStorage.getItem('pos_table_count') || '12');
+}
+function saveTableCount(n) {
+  localStorage.setItem('pos_table_count', n);
+}
+
+var menus = loadMenus();
+var tableCount = loadTableCount();
+// 테이블별 주문: {1: {key: {name,price,qty}}, ...}
+var tableOrders = {};
+var curTable = 1;
+var curCat = Object.keys(menus)[0];
+
+// ========== 포맷 ==========
+function fmt(n) { return n.toLocaleString('ko-KR') + '원'; }
+
+// ========== 테이블 선택 화면 ==========
+function renderTableGrid() {
+  var g = document.getElementById('tableGrid');
+  g.innerHTML = '';
+  for (var i = 1; i <= tableCount; i++) {
+    (function(t) {
+      var b = document.createElement('button');
+      b.className = 'table-btn' + (tableOrders[t] && Object.keys(tableOrders[t]).length ? ' occupied' : '');
+      b.innerHTML = '테이블 ' + t + (tableOrders[t] && Object.keys(tableOrders[t]).length ? '<br><span style="font-size:12px;font-weight:400">주문중</span>' : '');
+      b.onclick = function() { selectTable(t); };
+      g.appendChild(b);
+    })(i);
+  }
+}
+
+function selectTable(t) {
+  curTable = t;
+  if (!tableOrders[t]) tableOrders[t] = {};
+  document.getElementById('tableLabel').textContent = '테이블 ' + t;
+  document.getElementById('orderTitle').textContent = '테이블 ' + t + ' 주문';
+  document.getElementById('tableScreen').style.display = 'none';
+  var ps = document.getElementById('posScreen');
+  ps.style.display = 'flex';
+  ps.classList.add('show');
+  curCat = Object.keys(menus)[0];
+  renderCats();
+  renderMenus();
+  renderOrder();
+}
+
+function goTableSelect() {
+  document.getElementById('posScreen').style.display = 'none';
+  document.getElementById('tableScreen').style.display = 'flex';
+  renderTableGrid();
+}
+
+// ========== 카테고리 / 메뉴 ==========
+function renderCats() {
+  var ct = document.getElementById('catTabs');
+  ct.innerHTML = '';
+  Object.keys(menus).forEach(function(cat) {
+    var b = document.createElement('button');
+    b.className = 'tab' + (cat === curCat ? ' active' : '');
+    b.textContent = cat;
+    b.onclick = function() { curCat = cat; renderCats(); renderMenus(); };
+    ct.appendChild(b);
+  });
+}
+
+function renderMenus() {
+  var g = document.getElementById('menuGrid');
+  g.innerHTML = '';
+  (menus[curCat] || []).forEach(function(m) {
+    var d = document.createElement('button');
+    d.className = 'menu-btn' + (m.beef ? ' beef' : '');
+    d.innerHTML = '<span class="name">' + m.name + '</span>' + (m.sub ? '<span class="sub">' + m.sub + '</span>' : '') + '<span class="price">' + fmt(m.price) + '</span>';
+    d.onclick = function() { addOrder(curCat + '::' + m.name, m); };
+    g.appendChild(d);
+  });
+}
+
+// ========== 주문 ==========
+function addOrder(key, m) {
+  var o = tableOrders[curTable];
+  if (!o[key]) o[key] = {name: m.name, price: m.price, qty: 0, key: key};
+  o[key].qty++;
+  renderOrder();
+}
+
+function renderOrder() {
+  var list = document.getElementById('orderList');
+  var o = tableOrders[curTable] || {};
+  var keys = Object.keys(o);
+  if (!keys.length) {
+    list.innerHTML = '<div class="empty">메뉴를 선택하세요</div>';
+    updateTotal();
+    return;
+  }
+  list.innerHTML = '';
+  keys.forEach(function(k) {
+    var item = o[k];
+    var d = document.createElement('div');
+    d.className = 'order-item';
+    d.innerHTML = '<span class="iname">' + item.name + '</span>' +
+      '<div class="iqty">' +
+      '<button onclick="changeQty(\'' + k + '\',-1)">-</button>' +
+      '<span class="qty">' + item.qty + '</span>' +
+      '<button onclick="changeQty(\'' + k + '\',1)">+</button>' +
+      '</div>' +
+      '<span class="iprice">' + fmt(item.price * item.qty) + '</span>' +
+      '<button class="idel" onclick="removeItem(\'' + k + '\')">×</button>';
+    list.appendChild(d);
+  });
+  updateTotal();
+}
+
+function changeQty(k, d) {
+  var o = tableOrders[curTable];
+  o[k].qty += d;
+  if (o[k].qty <= 0) delete o[k];
+  renderOrder();
+}
+function removeItem(k) { delete tableOrders[curTable][k]; renderOrder(); }
+
+function updateTotal() {
+  var o = tableOrders[curTable] || {};
+  var keys = Object.keys(o);
+  var total = keys.reduce(function(s, k) { return s + o[k].price * o[k].qty; }, 0);
+  var qty = keys.reduce(function(s, k) { return s + o[k].qty; }, 0);
+  document.getElementById('itemCount').textContent = keys.length + '가지';
+  document.getElementById('qtySum').textContent = qty + '개';
+  document.getElementById('totalPrice').textContent = fmt(total);
+}
+
+function clearOrder() {
+  tableOrders[curTable] = {};
+  renderOrder();
+}
+
+function pay(method) {
+  var o = tableOrders[curTable] || {};
+  var keys = Object.keys(o);
+  if (!keys.length) { showAlert('주문 내역이 없습니다'); return; }
+  var total = keys.reduce(function(s, k) { return s + o[k].price * o[k].qty; }, 0);
+  showAlert('테이블 ' + curTable + ' · ' + method + ' 결제 완료: ' + fmt(total));
+  clearOrder();
+  setTimeout(function() { goTableSelect(); }, 1800);
+}
+
+// ========== 관리 ==========
+function openAdmin() {
+  document.getElementById('adminOverlay').classList.add('show');
+  renderAdminCat();
+  renderAdminEdit();
+}
+function closeAdmin() { document.getElementById('adminOverlay').classList.remove('show'); }
+
+function renderAdminCat() {
+  var sel = document.getElementById('adminCat');
+  sel.innerHTML = '';
+  Object.keys(menus).forEach(function(c) {
+    var o = document.createElement('option');
+    o.value = c; o.textContent = c;
+    sel.appendChild(o);
+  });
+}
+function renderAdminEdit() {
+  var cat = document.getElementById('adminCat').value;
+  var list = document.getElementById('adminEditList');
+  list.innerHTML = '';
+  (menus[cat] || []).forEach(function(m, i) {
+    var d = document.createElement('div');
+    d.className = 'edit-item';
+    d.innerHTML = '<span class="ename">' + m.name + '</span>' +
+      '<input type="number" value="' + m.price + '" onchange="updatePrice(\'' + cat + '\',' + i + ',this.value)">' +
+      '<button class="del-btn" onclick="deleteMenu(\'' + cat + '\',' + i + ')">×</button>';
+    list.appendChild(d);
+  });
+}
+function updatePrice(cat, i, val) {
+  menus[cat][i].price = parseInt(val) || 0;
+  saveMenus();
+  renderMenus();
+}
+function deleteMenu(cat, i) {
+  menus[cat].splice(i, 1);
+  saveMenus();
+  renderAdminEdit();
+  renderMenus();
+}
+function addMenu() {
+  var name = document.getElementById('newName').value.trim();
+  var sub = document.getElementById('newSub').value.trim();
+  var price = parseInt(document.getElementById('newPrice').value) || 0;
+  var newCat = document.getElementById('newCatInput').value.trim();
+  var cat = document.getElementById('adminCat').value;
+  if (!name) { showAlert('메뉴명을 입력해주세요'); return; }
+  if (!price) { showAlert('가격을 입력해주세요'); return; }
+  if (newCat) {
+    if (!menus[newCat]) menus[newCat] = [];
+    cat = newCat;
+    document.getElementById('newCatInput').value = '';
+  }
+  if (!menus[cat]) menus[cat] = [];
+  menus[cat].push({name: name, sub: sub, price: price, beef: cat === '한우'});
+  document.getElementById('newName').value = '';
+  document.getElementById('newSub').value = '';
+  document.getElementById('newPrice').value = '';
+  saveMenus();
+  renderAdminCat();
+  document.getElementById('adminCat').value = cat;
+  renderAdminEdit();
+  renderMenus();
+  renderCats();
+  showAlert(name + ' 추가 완료!');
+}
+
+// ========== 테이블 수 설정 ==========
+function openTblSettings() {
+  document.getElementById('tblCountInput').value = tableCount;
+  document.getElementById('tblOverlay').classList.add('show');
+}
+function closeTblSettings() { document.getElementById('tblOverlay').classList.remove('show'); }
+function saveTblCount() {
+  var n = parseInt(document.getElementById('tblCountInput').value) || 12;
+  n = Math.max(1, Math.min(30, n));
+  tableCount = n;
+  saveTableCount(n);
+  closeTblSettings();
+  renderTableGrid();
+  showAlert('테이블 ' + n + '개로 변경되었습니다');
+}
+
+// ========== 알림 ==========
+function showAlert(msg) {
+  var a = document.getElementById('alertBox');
+  a.textContent = msg; a.style.display = 'block';
+  clearTimeout(window._alertTimer);
+  window._alertTimer = setTimeout(function() { a.style.display = 'none'; }, 2000);
+}
+
+// ========== 초기화 ==========
+renderTableGrid();
+</script>
+</body>
+</html>
