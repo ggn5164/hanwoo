@@ -5,114 +5,78 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <title>한우 포스기 (가로 모드)</title>
+    <title>한우 포스기 (매출관리 포함)</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; -webkit-user-select: none; }
         :root {
-            --primary: #8B1A1A;
-            --bg: #fff;
-            --bg2: #f8f4f0;
-            --text: #1a1a1a;
-            --border: #ccc;
-            --green: #1a6b2e;
+            --primary: #8B1A1A; --bg: #fff; --bg2: #f8f4f0; --text: #1a1a1a;
+            --border: #ccc; --green: #1a6b2e; --blue: #1e40af;
         }
-        body {
-            font-family: 'Malgun Gothic', sans-serif;
-            background: #f0e8e0;
-            font-size: 20px; /* 기본 폰트 크게 */
-            height: 100vh;
-            overflow: hidden;
-        }
+        body { font-family: 'Malgun Gothic', sans-serif; background: #f0e8e0; font-size: 20px; height: 100vh; overflow: hidden; }
 
-        /* 테이블 선택 화면 */
-        #tableScreen {
-            position: fixed; inset: 0; background: #f0e8e0;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            gap: 20px; z-index: 50;
-        }
-        #tableScreen h1 { font-size: 32px; color: var(--primary); margin-bottom: 10px; }
-        .table-grid {
-            display: grid; grid-template-columns: repeat(6, 1fr); /* 가로모드 대응 6열 */
-            gap: 15px; width: 95vw;
-        }
-        .table-btn {
-            padding: 30px 10px; border-radius: 12px; border: 3px solid var(--border);
-            background: var(--bg); font-size: 24px; font-weight: bold; cursor: pointer;
-        }
+        /* 화면 공통 */
+        .screen { display: none; height: 100vh; flex-direction: column; }
+        .screen.active { display: flex; }
+
+        /* 상단 바 */
+        .top-bar { background: var(--primary); color: #fff; display: flex; align-items: center; padding: 15px 20px; flex-shrink: 0; }
+        .table-info { font-size: 28px; font-weight: bold; flex: 1; }
+        .top-bar button { padding: 10px 18px; font-size: 18px; margin-left: 10px; cursor: pointer; border-radius: 8px; border: none; background: rgba(255,255,255,0.2); color: #fff; }
+
+        /* 테이블 그리드 */
+        #tableScreen { align-items: center; justify-content: center; gap: 20px; background: #f0e8e0; }
+        .table-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 15px; width: 95vw; }
+        .table-btn { padding: 30px 10px; border-radius: 12px; border: 3px solid var(--border); background: var(--bg); font-size: 24px; font-weight: bold; }
         .table-btn.occupied { background: #ffeb3b; border-color: #fbc02d; }
 
-        /* 메인 POS 화면 (가로 최적화) */
-        #posScreen { display: none; height: 100vh; flex-direction: column; }
-        .top-bar {
-            background: var(--primary); color: #fff;
-            display: flex; align-items: center; padding: 15px 20px; flex-shrink: 0;
-        }
-        .table-info { font-size: 28px; font-weight: bold; flex: 1; }
-        .top-bar button { padding: 10px 20px; font-size: 18px; margin-left: 10px; cursor: pointer; border-radius: 8px; border: none; }
-
+        /* 메인 레이아웃 */
         .main-area { display: flex; flex: 1; overflow: hidden; }
-
-        /* 왼쪽: 메뉴 선택 (60%) */
         .left { width: 60%; display: flex; flex-direction: column; padding: 15px; gap: 15px; }
-        .cat-tabs { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 5px; }
-        .tab { 
-            padding: 15px 25px; font-size: 22px; font-weight: bold; border-radius: 10px; 
-            border: 2px solid var(--border); background: var(--bg); cursor: pointer; white-space: nowrap;
-        }
-        .tab.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+        .right { width: 40%; background: var(--bg); border-left: 3px solid var(--border); display: flex; flex-direction: column; padding: 15px; gap: 10px; }
 
-        .menu-grid {
-            display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
-            overflow-y: auto; flex: 1;
-        }
-        .menu-btn {
-            background: var(--bg); border: 2px solid var(--border); border-radius: 12px;
-            padding: 20px 10px; cursor: pointer; display: flex; flex-direction: column; gap: 8px; align-items: center;
-        }
+        /* 메뉴판 */
+        .cat-tabs { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 5px; }
+        .tab { padding: 15px 25px; font-size: 22px; font-weight: bold; border-radius: 10px; border: 2px solid var(--border); background: var(--bg); white-space: nowrap; }
+        .tab.active { background: var(--primary); color: #fff; }
+        .menu-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; overflow-y: auto; flex: 1; }
+        .menu-btn { background: var(--bg); border: 2px solid var(--border); border-radius: 12px; padding: 20px 10px; display: flex; flex-direction: column; gap: 8px; align-items: center; }
         .menu-btn .name { font-size: 22px; font-weight: bold; }
         .menu-btn .price { font-size: 20px; color: var(--primary); font-weight: bold; }
 
-        /* 오른쪽: 주문 내역 (40%) */
-        .right { 
-            width: 40%; background: var(--bg); border-left: 3px solid var(--border); 
-            display: flex; flex-direction: column; padding: 15px; gap: 10px; 
-        }
-        .order-title { font-size: 24px; font-weight: bold; color: var(--primary); border-bottom: 3px solid var(--primary); padding-bottom: 10px; }
+        /* 주문내역 */
         .order-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
         .order-item { display: flex; align-items: center; padding: 12px; background: var(--bg2); border-radius: 10px; font-size: 20px; }
         .order-item .iname { flex: 1; font-weight: bold; }
-        .qty-controls { display: flex; align-items: center; gap: 15px; margin: 0 15px; }
-        .qty-btn { width: 40px; height: 40px; font-size: 24px; font-weight: bold; cursor: pointer; border-radius: 5px; border: 1px solid #999; }
+        .qty-btn { width: 45px; height: 45px; font-size: 24px; font-weight: bold; border-radius: 8px; border: 1px solid #999; }
 
-        .total-box { background: #eee; padding: 15px; border-radius: 10px; border: 3px solid var(--primary); }
+        .total-box { background: #eee; padding: 15px; border-radius: 10px; border: 3px solid var(--primary); margin-top: auto; }
         .total-row.main { font-size: 32px; font-weight: bold; color: var(--primary); display: flex; justify-content: space-between; }
-
         .btn-row { display: flex; gap: 10px; }
-        .btn-pay { flex: 1; padding: 20px; font-size: 24px; font-weight: bold; border-radius: 12px; border: none; color: #fff; cursor: pointer; }
-        .btn-cash { background: var(--green); }
-        .btn-card { background: var(--primary); }
-        .btn-clear { background: #666; width: 80px; }
+        .btn-pay { flex: 1; padding: 22px; font-size: 26px; font-weight: bold; border-radius: 12px; border: none; color: #fff; cursor: pointer; }
 
-        /* 알림창 */
-        .alert {
-            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
-            background: rgba(0,0,0,0.8); color: #fff; padding: 20px 40px;
-            border-radius: 15px; font-size: 24px; display: none; z-index: 200;
-        }
+        /* 매출 확인 화면 */
+        #salesScreen { background: #fff; padding: 20px; }
+        .sales-list { flex: 1; overflow-y: auto; border: 2px solid #ddd; border-radius: 10px; margin-top: 10px; }
+        .sales-item { display: flex; justify-content: space-between; padding: 15px; border-bottom: 1px solid #eee; font-size: 22px; }
+
+        .alert { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.85); color: #fff; padding: 20px 40px; border-radius: 15px; font-size: 24px; display: none; z-index: 200; }
     </style>
 </head>
 <body>
 
-<div id="tableScreen">
-    <h1>🍖 한우 포스기 (테이블 선택)</h1>
+<div id="tableScreen" class="screen active">
+    <h1 style="font-size:36px; color:var(--primary);">🍖 한우 포스기</h1>
     <div class="table-grid" id="tableGrid"></div>
-    <button onclick="openTblSettings()" style="font-size:18px; padding:10px;">⚙ 테이블 수 변경</button>
+    <div style="display:flex; gap:10px;">
+        <button onclick="openSales()" style="font-size:20px; padding:15px 30px; border-radius:10px; background:var(--blue); color:#fff; border:none;">📊 매출 내역 확인</button>
+        <button onclick="changeTableCount()" style="font-size:20px; padding:15px 30px; border-radius:10px; background:#666; color:#fff; border:none;">⚙ 테이블 설정</button>
+    </div>
 </div>
 
-<div id="posScreen">
+<div id="posScreen" class="screen">
     <div class="top-bar">
         <span class="table-info" id="tableLabel">테이블 1</span>
-        <button onclick="goTableSelect()">테이블 변경</button>
+        <button onclick="goTableSelect()">테이블 변경 (닫기)</button>
     </div>
     <div class="main-area">
         <div class="left">
@@ -120,55 +84,63 @@
             <div class="menu-grid" id="menuGrid"></div>
         </div>
         <div class="right">
-            <div class="order-title">주문 내역</div>
-            <div id="orderList" class="order-list"></div>
+            <div class="order-list" id="orderList"></div>
             <div class="total-box">
                 <div class="total-row main"><span>합계</span><span id="totalPrice">0원</span></div>
             </div>
             <div class="btn-row">
-                <button class="btn-pay btn-clear" onclick="clearOrder()">취소</button>
-                <button class="btn-pay btn-cash" onclick="pay('현금')">현금</button>
-                <button class="btn-pay btn-card" onclick="pay('카드')">카드</button>
+                <button class="btn-pay" style="background:#666; flex:0.4;" onclick="clearOrder()">취소</button>
+                <button class="btn-pay" style="background:var(--green);" onclick="pay('현금')">현금</button>
+                <button class="btn-pay" style="background:var(--primary);" onclick="pay('카드')">카드</button>
             </div>
         </div>
+    </div>
+</div>
+
+<div id="salesScreen" class="screen">
+    <div class="top-bar" style="background:var(--blue);">
+        <span class="table-info">📊 날짜별 매출 집계</span>
+        <button onclick="goTableSelect()">돌아가기</button>
+    </div>
+    <div class="sales-list" id="salesList"></div>
+    <div style="padding:20px; display:flex; gap:10px;">
+        <button onclick="clearSales()" style="flex:1; padding:20px; font-size:22px; background:#999; border:none; border-radius:10px; color:#fff;">장부 전체 초기화</button>
     </div>
 </div>
 
 <div class="alert" id="alertBox"></div>
 
 <script>
-// ========== 1. 메뉴 데이터 관리 (여기서 가격 등을 수정하세요) ==========
-var menus = {
-    '한우': [
-        {name:'등심', price:30000}, {name:'갈비살', price:30000}, {name:'치마살', price:33000},
-        {name:'제비추리', price:33000}, {name:'살치살', price:36000}, {name:'안창살', price:42000}
-    ],
-    '주류/음료': [
-        {name:'소주', price:5000}, {name:'맥주', price:5000}, {name:'청하', price:6000},
-        {name:'복분자', price:15000}, {name:'강릉소주(17도)', price:12000}, {name:'강릉소주(24도)', price:14000},
-        {name:'강릉막걸리', price:5000}, {name:'음료수', price:2000}
-    ],
-    '식사류': [
-        {name:'냉면', price:5000}, {name:'맥주', price:6000}, {name:'콜라', price:2000}, {name:'사이다', price:2000}
-    ]
+// [메뉴 설정] 여기서 자유롭게 수정하세요
+const menus = {
+    '한우류': [{name:'등심', price:39000}, {name:'안심', price:45000}, {name:'갈비', price:42000}, {name:'살치살', price:48000}, {name:'꽃등심', price:52000}],
+    '식사류': [{name:'된장찌개', price:9000}, {name:'김치찌개', price:9000}, {name:'냉면', price:12000}, {name:'공기밥', price:1500}],
+    '주류/음료': [{name:'소주', price:5000}, {name:'맥주', price:6000}, {name:'콜라', price:2000}, {name:'사이다', price:2000}]
 };
 
-var tableCount = parseInt(localStorage.getItem('pos_table_count') || '12');
-var tableOrders = JSON.parse(localStorage.getItem('pos_table_orders') || '{}');
-var curTable = null;
-var curCat = Object.keys(menus)[0];
+let tableCount = parseInt(localStorage.getItem('pos_table_count') || '12');
+let tableOrders = JSON.parse(localStorage.getItem('pos_table_orders') || '{}');
+let salesData = JSON.parse(localStorage.getItem('pos_sales_data') || '{}'); // { "2023-10-27": { 현금: 50000, 카드: 100000 } }
+let curTable = null;
+let curCat = Object.keys(menus)[0];
 
 function fmt(n) { return n.toLocaleString() + '원'; }
-
-// ========== 2. 로직 (데이터 보존 핵심) ==========
+function getToday() { return new Date().toISOString().split('T')[0]; }
 
 function saveAll() {
     localStorage.setItem('pos_table_orders', JSON.stringify(tableOrders));
+    localStorage.setItem('pos_sales_data', JSON.stringify(salesData));
 }
 
+// 화면 전환
+function showScreen(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+}
+
+// 테이블 선택
 function renderTableGrid() {
-    const g = document.getElementById('tableGrid');
-    g.innerHTML = '';
+    const g = document.getElementById('tableGrid'); g.innerHTML = '';
     for (let i = 1; i <= tableCount; i++) {
         const hasOrder = tableOrders[i] && Object.keys(tableOrders[i]).length > 0;
         const b = document.createElement('button');
@@ -183,22 +155,15 @@ function selectTable(t) {
     curTable = t;
     if (!tableOrders[t]) tableOrders[t] = {};
     document.getElementById('tableLabel').textContent = t + '번 테이블';
-    document.getElementById('tableScreen').style.display = 'none';
-    document.getElementById('posScreen').style.display = 'flex';
-    renderCats();
-    renderMenus();
-    renderOrder();
+    showScreen('posScreen');
+    renderCats(); renderMenus(); renderOrder();
 }
 
-function goTableSelect() {
-    document.getElementById('posScreen').style.display = 'none';
-    document.getElementById('tableScreen').style.display = 'flex';
-    renderTableGrid();
-}
+function goTableSelect() { showScreen('tableScreen'); renderTableGrid(); }
 
+// POS 기능
 function renderCats() {
-    const ct = document.getElementById('catTabs');
-    ct.innerHTML = '';
+    const ct = document.getElementById('catTabs'); ct.innerHTML = '';
     Object.keys(menus).forEach(cat => {
         const b = document.createElement('button');
         b.className = 'tab' + (cat === curCat ? ' active' : '');
@@ -209,91 +174,113 @@ function renderCats() {
 }
 
 function renderMenus() {
-    const g = document.getElementById('menuGrid');
-    g.innerHTML = '';
+    const g = document.getElementById('menuGrid'); g.innerHTML = '';
     menus[curCat].forEach(m => {
         const d = document.createElement('button');
         d.className = 'menu-btn';
         d.innerHTML = `<span class="name">${m.name}</span><span class="price">${fmt(m.price)}</span>`;
-        d.onclick = () => addOrder(m);
+        d.onclick = () => {
+            if (!tableOrders[curTable][m.name]) tableOrders[curTable][m.name] = { price: m.price, qty: 0 };
+            tableOrders[curTable][m.name].qty++;
+            saveAll(); renderOrder();
+        };
         g.appendChild(d);
     });
-}
-
-function addOrder(m) {
-    const o = tableOrders[curTable];
-    if (!o[m.name]) o[m.name] = { price: m.price, qty: 0 };
-    o[m.name].qty++;
-    saveAll();
-    renderOrder();
-}
-
-function changeQty(name, delta) {
-    const o = tableOrders[curTable];
-    o[name].qty += delta;
-    if (o[name].qty <= 0) delete o[name];
-    saveAll();
-    renderOrder();
 }
 
 function renderOrder() {
     const list = document.getElementById('orderList');
     const o = tableOrders[curTable] || {};
-    list.innerHTML = '';
-    let total = 0;
-
+    list.innerHTML = ''; let total = 0;
     Object.keys(o).forEach(name => {
-        const item = o[name];
-        total += item.price * item.qty;
+        total += o[name].price * o[name].qty;
         const d = document.createElement('div');
         d.className = 'order-item';
-        d.innerHTML = `
-            <span class="iname">${name}</span>
-            <div class="qty-controls">
+        d.innerHTML = `<span class="iname">${name}</span>
+            <div style="display:flex; align-items:center; gap:10px;">
                 <button class="qty-btn" onclick="changeQty('${name}', -1)">-</button>
-                <span class="qty">${item.qty}</span>
+                <span style="font-weight:bold; width:30px; text-align:center;">${o[name].qty}</span>
                 <button class="qty-btn" onclick="changeQty('${name}', 1)">+</button>
             </div>
-            <span class="iprice">${fmt(item.price * item.qty)}</span>
-        `;
+            <span style="font-weight:bold; color:var(--primary); margin-left:15px; width:100px; text-align:right;">${fmt(o[name].price * o[name].qty)}</span>`;
         list.appendChild(d);
     });
     document.getElementById('totalPrice').textContent = fmt(total);
 }
 
-function clearOrder() {
-    if(confirm('주문을 모두 취소할까요?')) {
-        tableOrders[curTable] = {};
-        saveAll();
-        renderOrder();
-    }
+function changeQty(name, delta) {
+    tableOrders[curTable][name].qty += delta;
+    if (tableOrders[curTable][name].qty <= 0) delete tableOrders[curTable][name];
+    saveAll(); renderOrder();
 }
 
+function clearOrder() { if(confirm('전체 취소하시겠습니까?')) { tableOrders[curTable] = {}; saveAll(); renderOrder(); } }
+
+// 결제 및 매출 기록
 function pay(method) {
     const o = tableOrders[curTable];
-    if (Object.keys(o).length === 0) return;
-    showAlert(curTable + '번 테이블 ' + method + ' 결제 완료!');
+    const keys = Object.keys(o);
+    if (keys.length === 0) return;
+
+    let total = keys.reduce((s, k) => s + o[k].price * o[k].qty, 0);
+    const today = getToday();
+
+    // 매출 데이터 축적
+    if (!salesData[today]) salesData[today] = { '현금': 0, '카드': 0 };
+    salesData[today][method] += total;
+
+    showAlert(`${curTable}번 테이블 ${method} 결제 완료! (${fmt(total)})`);
     tableOrders[curTable] = {};
     saveAll();
     setTimeout(goTableSelect, 1500);
 }
 
-function showAlert(msg) {
-    const a = document.getElementById('alertBox');
-    a.textContent = msg; a.style.display = 'block';
-    setTimeout(() => { a.style.display = 'none'; }, 2000);
+// 매출 화면
+function openSales() {
+    showScreen('salesScreen');
+    const list = document.getElementById('salesList');
+    list.innerHTML = '';
+    
+    // 날짜 역순 정렬
+    const dates = Object.keys(salesData).sort().reverse();
+    
+    if (dates.length === 0) {
+        list.innerHTML = '<div style="text-align:center; padding:50px; color:#888;">매출 내역이 없습니다.</div>';
+        return;
+    }
+
+    dates.forEach(date => {
+        const day = salesData[date];
+        const total = day['현금'] + day['카드'];
+        const d = document.createElement('div');
+        d.className = 'sales-item';
+        d.innerHTML = `
+            <div style="font-weight:bold;">${date}</div>
+            <div style="text-align:right;">
+                <span style="color:var(--green); font-size:18px;">현금 ${fmt(day['현금'])}</span> / 
+                <span style="color:var(--primary); font-size:18px;">카드 ${fmt(day['카드'])}</span><br>
+                <span style="font-size:24px; font-weight:bold;">총합 ${fmt(total)}</span>
+            </div>`;
+        list.appendChild(d);
+    });
 }
 
-function openTblSettings() {
-    const n = prompt('테이블 수를 입력하세요 (1~30)', tableCount);
-    if (n) {
-        tableCount = parseInt(n);
-        localStorage.setItem('pos_table_count', tableCount);
-        renderTableGrid();
+function clearSales() {
+    if(confirm('모든 날짜의 매출 기록을 삭제할까요? (복구 불가)')) {
+        salesData = {}; saveAll(); openSales();
     }
 }
 
-// 초기화
+function changeTableCount() {
+    const n = prompt('테이블 수를 입력하세요 (현재: ' + tableCount + ')');
+    if(n) { tableCount = parseInt(n); localStorage.setItem('pos_table_count', tableCount); renderTableGrid(); }
+}
+
+function showAlert(msg) {
+    const a = document.getElementById('alertBox'); a.textContent = msg; a.style.display = 'block';
+    setTimeout(() => { a.style.display = 'none'; }, 2000);
+}
+
 renderTableGrid();
 </script>
 </body>
