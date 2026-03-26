@@ -5,8 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <title>한우 포스기 (매출관리 포함)</title>
+    <title>한우 포스기 (JSON 연동형)</title>
     <style>
+        /* [스타일] 아버님을 위한 큰 글씨 및 가로 모드 최적화 */
         * { box-sizing: border-box; margin: 0; padding: 0; -webkit-user-select: none; }
         :root {
             --primary: #8B1A1A; --bg: #fff; --bg2: #f8f4f0; --text: #1a1a1a;
@@ -14,7 +15,6 @@
         }
         body { font-family: 'Malgun Gothic', sans-serif; background: #f0e8e0; font-size: 20px; height: 100vh; overflow: hidden; }
 
-        /* 화면 공통 */
         .screen { display: none; height: 100vh; flex-direction: column; }
         .screen.active { display: flex; }
 
@@ -29,12 +29,12 @@
         .table-btn { padding: 30px 10px; border-radius: 12px; border: 3px solid var(--border); background: var(--bg); font-size: 24px; font-weight: bold; }
         .table-btn.occupied { background: #ffeb3b; border-color: #fbc02d; }
 
-        /* 메인 레이아웃 */
+        /* 메인 영역 */
         .main-area { display: flex; flex: 1; overflow: hidden; }
         .left { width: 60%; display: flex; flex-direction: column; padding: 15px; gap: 15px; }
         .right { width: 40%; background: var(--bg); border-left: 3px solid var(--border); display: flex; flex-direction: column; padding: 15px; gap: 10px; }
 
-        /* 메뉴판 */
+        /* 메뉴판 및 탭 */
         .cat-tabs { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 5px; }
         .tab { padding: 15px 25px; font-size: 22px; font-weight: bold; border-radius: 10px; border: 2px solid var(--border); background: var(--bg); white-space: nowrap; }
         .tab.active { background: var(--primary); color: #fff; }
@@ -43,7 +43,7 @@
         .menu-btn .name { font-size: 22px; font-weight: bold; }
         .menu-btn .price { font-size: 20px; color: var(--primary); font-weight: bold; }
 
-        /* 주문내역 */
+        /* 주문 리스트 */
         .order-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
         .order-item { display: flex; align-items: center; padding: 12px; background: var(--bg2); border-radius: 10px; font-size: 20px; }
         .order-item .iname { flex: 1; font-weight: bold; }
@@ -54,7 +54,7 @@
         .btn-row { display: flex; gap: 10px; }
         .btn-pay { flex: 1; padding: 22px; font-size: 26px; font-weight: bold; border-radius: 12px; border: none; color: #fff; cursor: pointer; }
 
-        /* 매출 확인 화면 */
+        /* 매출 화면 */
         #salesScreen { background: #fff; padding: 20px; }
         .sales-list { flex: 1; overflow-y: auto; border: 2px solid #ddd; border-radius: 10px; margin-top: 10px; }
         .sales-item { display: flex; justify-content: space-between; padding: 15px; border-bottom: 1px solid #eee; font-size: 22px; }
@@ -84,7 +84,7 @@
             <div class="menu-grid" id="menuGrid"></div>
         </div>
         <div class="right">
-            <div class="order-list" id="orderList"></div>
+            <div id="orderList" class="order-list"></div>
             <div class="total-box">
                 <div class="total-row main"><span>합계</span><span id="totalPrice">0원</span></div>
             </div>
@@ -103,26 +103,21 @@
         <button onclick="goTableSelect()">돌아가기</button>
     </div>
     <div class="sales-list" id="salesList"></div>
-    <div style="padding:20px; display:flex; gap:10px;">
-        <button onclick="clearSales()" style="flex:1; padding:20px; font-size:22px; background:#999; border:none; border-radius:10px; color:#fff;">장부 전체 초기화</button>
+    <div style="padding:20px;">
+        <button onclick="clearSales()" style="width:100%; padding:20px; font-size:22px; background:#999; border:none; border-radius:10px; color:#fff;">장부 전체 초기화</button>
     </div>
 </div>
 
 <div class="alert" id="alertBox"></div>
 
 <script>
-// [메뉴 설정] 여기서 자유롭게 수정하세요
-const menus = {
-    '한우': [{name:'갈비살', price:30000}, {name:'등심', price:30000}, {name:'치마살', price:42000}, {name:'살치살', price:48000}, {name:'꽃등심', price:52000}],
-    '식사류': [{name:'된장찌개', price:9000}, {name:'김치찌개', price:9000}, {name:'냉면', price:12000}, {name:'공기밥', price:1500}],
-    '주류/음료': [{name:'소주', price:5000}, {name:'맥주', price:6000}, {name:'콜라', price:2000}, {name:'사이다', price:2000}]
-};
-
+// [변수 설정]
+let menus = {}; 
 let tableCount = parseInt(localStorage.getItem('pos_table_count') || '12');
 let tableOrders = JSON.parse(localStorage.getItem('pos_table_orders') || '{}');
-let salesData = JSON.parse(localStorage.getItem('pos_sales_data') || '{}'); // { "2023-10-27": { 현금: 50000, 카드: 100000 } }
+let salesData = JSON.parse(localStorage.getItem('pos_sales_data') || '{}');
 let curTable = null;
-let curCat = Object.keys(menus)[0];
+let curCat = null;
 
 function fmt(n) { return n.toLocaleString() + '원'; }
 function getToday() { return new Date().toISOString().split('T')[0]; }
@@ -132,13 +127,25 @@ function saveAll() {
     localStorage.setItem('pos_sales_data', JSON.stringify(salesData));
 }
 
-// 화면 전환
+// 🌐 JSON 데이터 로드 (핵심 수정 사항)
+async function fetchMenuData() {
+    try {
+        const response = await fetch('./menu.json');
+        if (!response.ok) throw new Error('파일을 찾을 수 없습니다.');
+        menus = await response.json();
+        curCat = Object.keys(menus)[0]; 
+        renderTableGrid(); 
+    } catch (error) {
+        console.error(error);
+        alert("menu.json 파일을 불러오지 못했습니다. 파일이 같은 경로에 있는지 확인해주세요.");
+    }
+}
+
 function showScreen(id) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     document.getElementById(id).classList.add('active');
 }
 
-// 테이블 선택
 function renderTableGrid() {
     const g = document.getElementById('tableGrid'); g.innerHTML = '';
     for (let i = 1; i <= tableCount; i++) {
@@ -161,7 +168,6 @@ function selectTable(t) {
 
 function goTableSelect() { showScreen('tableScreen'); renderTableGrid(); }
 
-// POS 기능
 function renderCats() {
     const ct = document.getElementById('catTabs'); ct.innerHTML = '';
     Object.keys(menus).forEach(cat => {
@@ -175,6 +181,7 @@ function renderCats() {
 
 function renderMenus() {
     const g = document.getElementById('menuGrid'); g.innerHTML = '';
+    if (!menus[curCat]) return;
     menus[curCat].forEach(m => {
         const d = document.createElement('button');
         d.className = 'menu-btn';
@@ -216,46 +223,31 @@ function changeQty(name, delta) {
 
 function clearOrder() { if(confirm('전체 취소하시겠습니까?')) { tableOrders[curTable] = {}; saveAll(); renderOrder(); } }
 
-// 결제 및 매출 기록
 function pay(method) {
     const o = tableOrders[curTable];
     const keys = Object.keys(o);
     if (keys.length === 0) return;
-
     let total = keys.reduce((s, k) => s + o[k].price * o[k].qty, 0);
     const today = getToday();
-
-    // 매출 데이터 축적
     if (!salesData[today]) salesData[today] = { '현금': 0, '카드': 0 };
     salesData[today][method] += total;
-
     showAlert(`${curTable}번 테이블 ${method} 결제 완료! (${fmt(total)})`);
     tableOrders[curTable] = {};
     saveAll();
     setTimeout(goTableSelect, 1500);
 }
 
-// 매출 화면
 function openSales() {
     showScreen('salesScreen');
-    const list = document.getElementById('salesList');
-    list.innerHTML = '';
-    
-    // 날짜 역순 정렬
+    const list = document.getElementById('salesList'); list.innerHTML = '';
     const dates = Object.keys(salesData).sort().reverse();
-    
-    if (dates.length === 0) {
-        list.innerHTML = '<div style="text-align:center; padding:50px; color:#888;">매출 내역이 없습니다.</div>';
-        return;
-    }
-
+    if (dates.length === 0) { list.innerHTML = '<div style="text-align:center; padding:50px; color:#888;">매출 내역이 없습니다.</div>'; return; }
     dates.forEach(date => {
         const day = salesData[date];
         const total = day['현금'] + day['카드'];
         const d = document.createElement('div');
         d.className = 'sales-item';
-        d.innerHTML = `
-            <div style="font-weight:bold;">${date}</div>
+        d.innerHTML = `<div style="font-weight:bold;">${date}</div>
             <div style="text-align:right;">
                 <span style="color:var(--green); font-size:18px;">현금 ${fmt(day['현금'])}</span> / 
                 <span style="color:var(--primary); font-size:18px;">카드 ${fmt(day['카드'])}</span><br>
@@ -266,13 +258,11 @@ function openSales() {
 }
 
 function clearSales() {
-    if(confirm('모든 날짜의 매출 기록을 삭제할까요? (복구 불가)')) {
-        salesData = {}; saveAll(); openSales();
-    }
+    if(confirm('모든 매출 기록을 삭제할까요?')) { salesData = {}; saveAll(); openSales(); }
 }
 
 function changeTableCount() {
-    const n = prompt('테이블 수를 입력하세요 (현재: ' + tableCount + ')');
+    const n = prompt('테이블 수를 입력하세요');
     if(n) { tableCount = parseInt(n); localStorage.setItem('pos_table_count', tableCount); renderTableGrid(); }
 }
 
@@ -281,7 +271,8 @@ function showAlert(msg) {
     setTimeout(() => { a.style.display = 'none'; }, 2000);
 }
 
-renderTableGrid();
+// 초기 로딩
+fetchMenuData();
 </script>
 </body>
 </html>
