@@ -7,58 +7,85 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <title>한우 포스기 (JSON 연동형)</title>
     <style>
-        /* [스타일] 아버님을 위한 큰 글씨 및 가로 모드 최적화 */
+        /* [스타일] 아버님을 위한 큰 글씨, 가로 모드, 스크롤 최적화 버전 */
         * { box-sizing: border-box; margin: 0; padding: 0; -webkit-user-select: none; }
         :root {
             --primary: #8B1A1A; --bg: #fff; --bg2: #f8f4f0; --text: #1a1a1a;
             --border: #ccc; --green: #1a6b2e; --blue: #1e40af;
         }
-        body { font-family: 'Malgun Gothic', sans-serif; background: #f0e8e0; font-size: 20px; height: 100vh; overflow: hidden; overscroll-behavior-y: contain; }
-
+        body { 
+            font-family: 'Malgun Gothic', sans-serif; 
+            background: #f0e8e0; 
+            font-size: 20px; 
+            height: 100vh; 
+            overflow: hidden; 
+            overscroll-behavior-y: contain; /* 당겨서 새로고침 방지 */
+        }
+        
         .screen { display: none; height: 100vh; flex-direction: column; }
         .screen.active { display: flex; }
-
+        
         /* 상단 바 */
-        .top-bar { background: var(--primary); color: #fff; display: flex; align-items: center; padding: 15px 20px; flex-shrink: 0; }
-        .table-info { font-size: 28px; font-weight: bold; flex: 1; }
-        .top-bar button { padding: 10px 18px; font-size: 18px; margin-left: 10px; cursor: pointer; border-radius: 8px; border: none; background: rgba(255,255,255,0.2); color: #fff; }
-
-        /* 테이블 그리드 */
+        .top-bar { background: var(--primary); color: #fff; display: flex; align-items: center; padding: 12px 20px; flex-shrink: 0; }
+        .table-info { font-size: 26px; font-weight: bold; flex: 1; }
+        .top-bar button { padding: 8px 15px; font-size: 16px; margin-left: 10px; cursor: pointer; border-radius: 8px; border: none; background: rgba(255,255,255,0.2); color: #fff; }
+        
+        /* 테이블 선택 화면 */
         #tableScreen { align-items: center; justify-content: center; gap: 20px; background: #f0e8e0; }
         .table-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 15px; width: 95vw; }
-        .table-btn { padding: 30px 10px; border-radius: 12px; border: 3px solid var(--border); background: var(--bg); font-size: 24px; font-weight: bold; }
+        .table-btn { padding: 25px 10px; border-radius: 12px; border: 3px solid var(--border); background: var(--bg); font-size: 22px; font-weight: bold; }
         .table-btn.occupied { background: #ffeb3b; border-color: #fbc02d; }
-
-        /* 메인 영역 */
+        
+        /* 메인 레이아웃 */
         .main-area { display: flex; flex: 1; overflow: hidden; }
-        .left { width: 60%; display: flex; flex-direction: column; padding: 15px; gap: 15px; }
-        .right { width: 40%; background: var(--bg); border-left: 3px solid var(--border); display: flex; flex-direction: column; padding: 15px; gap: 10px; }
-
-        /* 메뉴판 및 탭 */
+        .left { width: 60%; display: flex; flex-direction: column; padding: 12px; gap: 12px; }
+        
+        /* 오른쪽 주문 내역 영역 (슬림화 핵심!) */
+        .right { 
+            width: 40%; 
+            background: var(--bg); 
+            border-left: 3px solid var(--border); 
+            display: flex; 
+            flex-direction: column; 
+            padding: 10px; 
+            gap: 8px; 
+        }
+        
+        /* 메뉴판 탭 및 그리드 */
         .cat-tabs { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 5px; }
-        .tab { padding: 15px 25px; font-size: 22px; font-weight: bold; border-radius: 10px; border: 2px solid var(--border); background: var(--bg); white-space: nowrap; }
+        .tab { padding: 12px 20px; font-size: 20px; font-weight: bold; border-radius: 10px; border: 2px solid var(--border); background: var(--bg); white-space: nowrap; }
         .tab.active { background: var(--primary); color: #fff; }
-        .menu-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; overflow-y: auto; flex: 1; }
-        .menu-btn { background: var(--bg); border: 2px solid var(--border); border-radius: 12px; padding: 20px 10px; display: flex; flex-direction: column; gap: 8px; align-items: center; }
-        .menu-btn .name { font-size: 22px; font-weight: bold; }
-        .menu-btn .price { font-size: 20px; color: var(--primary); font-weight: bold; }
-
-        /* 주문 리스트 */
-        .order-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
-        .order-item { display: flex; align-items: center; padding: 12px; background: var(--bg2); border-radius: 10px; font-size: 20px; }
+        .menu-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; overflow-y: auto; flex: 1; }
+        .menu-btn { background: var(--bg); border: 2px solid var(--border); border-radius: 10px; padding: 15px 5px; display: flex; flex-direction: column; gap: 5px; align-items: center; }
+        .menu-btn .name { font-size: 20px; font-weight: bold; }
+        .menu-btn .price { font-size: 18px; color: var(--primary); font-weight: bold; }
+        
+        /* 주문 리스트 (더 많이 보이게 수정) */
+        .order-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 5px; }
+        .order-item { display: flex; align-items: center; padding: 8px 12px; background: var(--bg2); border-radius: 8px; font-size: 19px; }
         .order-item .iname { flex: 1; font-weight: bold; }
-        .qty-btn { width: 45px; height: 45px; font-size: 24px; font-weight: bold; border-radius: 8px; border: 1px solid #999; }
-
-        .total-box { background: #eee; padding: 15px; border-radius: 10px; border: 3px solid var(--primary); margin-top: auto; }
-        .total-row.main { font-size: 32px; font-weight: bold; color: var(--primary); display: flex; justify-content: space-between; }
-        .btn-row { display: flex; gap: 10px; }
-        .btn-pay { flex: 1; padding: 22px; font-size: 26px; font-weight: bold; border-radius: 12px; border: none; color: #fff; cursor: pointer; }
-
-        /* 매출 화면 */
+        .qty-btn { width: 40px; height: 40px; font-size: 22px; font-weight: bold; border-radius: 8px; border: 1px solid #999; background: #fff; }
+        
+        /* 합계 영역 */
+        .total-box { background: #f1f1f1; padding: 8px 15px; border-radius: 8px; border: 2px solid var(--primary); margin-top: auto; margin-bottom: 5px; }
+        .total-row.main { font-size: 24px; font-weight: bold; color: var(--primary); display: flex; justify-content: space-between; }
+        
+        /* 결제 버튼 영역 */
+        .btn-row { display: flex; gap: 8px; }
+        .btn-pay { flex: 1; padding: 15px 5px; font-size: 20px; font-weight: bold; border-radius: 8px; border: none; color: #fff; cursor: pointer; }
+        
+        /* 취소 버튼 최적화 */
+        .btn-pay[onclick="clearOrder()"] { 
+            flex: 0.35; 
+            background: #777 !important; 
+            font-size: 18px; 
+        }
+        .btn-pay:active { opacity: 0.7; }
+        
+        /* 매출 및 알림 */
         #salesScreen { background: #fff; padding: 20px; }
         .sales-list { flex: 1; overflow-y: auto; border: 2px solid #ddd; border-radius: 10px; margin-top: 10px; }
         .sales-item { display: flex; justify-content: space-between; padding: 15px; border-bottom: 1px solid #eee; font-size: 22px; }
-
         .alert { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.85); color: #fff; padding: 20px 40px; border-radius: 15px; font-size: 24px; display: none; z-index: 200; }
     </style>
 </head>
